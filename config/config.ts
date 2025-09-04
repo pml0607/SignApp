@@ -10,7 +10,7 @@ export interface AppConfig {
 
 // Development configuration
 const DEV_CONFIG: AppConfig = {
-  API_BASE_URL: 'https://boulevard-thorough-lives-cuts.trycloudflare.com',  // HTTPS for Cloudflare
+  API_BASE_URL: 'https://qui-appointment-joel-pharmaceutical.trycloudflare.com',  // HTTPS for Cloudflare
   WS_BASE_URL: 'wss://boulevard-thorough-lives-cuts.trycloudflare.com',     // WSS for Cloudflare WebSocket
   UPLOAD_TIMEOUT: 60000, // 60 seconds (longer for Cloudflare)
   PROCESSING_TIMEOUT: 180000, // 3 minutes

@@ -54,7 +54,7 @@ class ApiService {
 
   constructor(baseUrl?: string) {
     // Import config dynamically to avoid circular dependencies
-    this.baseUrl = baseUrl || 'https://boulevard-thorough-lives-cuts.trycloudflare.com';
+    this.baseUrl = baseUrl || 'https://phi-proposition-pets-examinations.trycloudflare.com';
     this.wsUrl = this.baseUrl.replace('https://', 'wss://').replace('http://', 'ws://');
     
     DebugLogger.log('API', '=== API Service Initialized ===');
@@ -278,29 +278,17 @@ class ApiService {
   ): Promise<ProcessingStatus> {
     return new Promise(async (resolve, reject) => {
       let wsCleanup: (() => void) | null = null;
-      const timeoutId = setTimeout(() => {
-        DebugLogger.error('PROCESS', 'Overall processing timeout (3 minutes)');
-        reject(new Error('Overall processing timeout (3 minutes)'));
-      }, 180000); // 3 minutes total timeout
       
       try {
         DebugLogger.log('PROCESS', '=== Starting Video Processing Workflow ===');
         DebugLogger.log('PROCESS', `Video URI: ${videoUri.substring(0, 50)}...`);
         
-        // Step 1: Upload video with longer timeout
+        // Step 1: Upload video
         onStatusUpdate('Uploading video...');
         onProgress(10);
         
         DebugLogger.log('PROCESS', 'Step 1: Starting upload...');
-        const uploadResult = await Promise.race([
-          this.uploadVideo(videoUri),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => {
-              DebugLogger.error('PROCESS', 'Upload timeout after 2 minutes');
-              reject(new Error('Upload timeout after 2 minutes'));
-            }, 120000)
-          )
-        ]) as UploadResponse;
+        const uploadResult = await this.uploadVideo(videoUri);
         
         if (uploadResult.status !== 'received') {
           throw new Error(`Upload failed with status: ${uploadResult.status}`);
@@ -326,7 +314,6 @@ class ApiService {
                 
               case 'done':
                 DebugLogger.log('PROCESS', '=== Processing Complete Successfully ===');
-                clearTimeout(timeoutId);
                 onProgress(100);
                 onStatusUpdate('Analysis complete!');
                 resolve(status);
@@ -334,7 +321,6 @@ class ApiService {
                 
               case 'timeout':
                 DebugLogger.error('PROCESS', 'Server processing timed out');
-                clearTimeout(timeoutId);
                 onProgress(100);
                 onStatusUpdate('Processing timeout');
                 reject(new Error('Server processing timed out'));
@@ -342,7 +328,6 @@ class ApiService {
                 
               case 'error':
                 DebugLogger.error('PROCESS', 'Server processing error', status);
-                clearTimeout(timeoutId);
                 onProgress(100);
                 onStatusUpdate('Processing failed');
                 reject(new Error('Server processing error'));
@@ -351,18 +336,15 @@ class ApiService {
           },
           (error) => {
             DebugLogger.error('PROCESS', 'WebSocket error', error);
-            clearTimeout(timeoutId);
             reject(error);
           }
         );
 
       } catch (error) {
         DebugLogger.error('PROCESS', '=== Processing Failed ===', {
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Unknown error',
           videoUri: videoUri.substring(0, 50) + '...'
         });
-        
-        clearTimeout(timeoutId);
         if (wsCleanup) {
           wsCleanup();
         }

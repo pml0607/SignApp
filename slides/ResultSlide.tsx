@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+import GestureMapService from '../services/GestureMapService';
 
 interface ResultSlideProps {
   result: string | null;
@@ -10,8 +11,29 @@ interface ResultSlideProps {
 }
 
 const ResultSlide = ({ result, onTryAnother, onBackToHome }: ResultSlideProps) => {
+  const [mappedResult, setMappedResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initializeGestureMap = async () => {
+      try {
+        const gestureMapService = GestureMapService.getInstance();
+        // Removed gestureMapService.initialize() as it does not exist
+        if (result) {
+          const gestureCode = typeof result === 'string' ? result : String(result);
+          const gestureName = gestureMapService.getGestureName(gestureCode);
+          setMappedResult(gestureName);
+        }
+      } catch (error) {
+        console.error('Error mapping gesture:', error);
+        setMappedResult(result as string);
+      }
+    };
+
+    initializeGestureMap();
+  }, [result]);
+
   // Determine if result is an error - handle both string and non-string results
-  const resultString = typeof result === 'string' ? result : String(result || '');
+  const resultString = mappedResult || (typeof result === 'string' ? result : String(result || ''));
   const isError = resultString.includes('Error:') || resultString.includes('Processing incomplete') || result === null;
   const isSuccess = result && !isError;
 

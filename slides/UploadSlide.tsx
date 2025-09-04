@@ -83,8 +83,8 @@ const uploadStyles = StyleSheet.create({
     marginBottom: 30,
   },
   video: {
-    width: 200,
-    height: 150,
+    width: 240,
+    height: 180, // 4:3 aspect ratio (240x180 = 4:3)
     borderRadius: 12,
     backgroundColor: '#000',
   },

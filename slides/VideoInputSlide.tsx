@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 import * as Animatable from 'react-native-animatable';
 import { MaterialIcons } from '@expo/vector-icons';
+import { getVideoInfo, getVideoProcessingRecommendation } from '../utils/videoUtils';
 
 interface VideoInputSlideProps {
   onVideoSelected: (uri: string) => void;
@@ -78,14 +79,44 @@ const VideoInputSlide = ({ onVideoSelected, onBack }: VideoInputSlideProps) => {
       // Launch camera directly for video recording
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-        allowsEditing: false,
-        quality: 1,
+        allowsEditing: false, // Disable editing to avoid cropping
+        quality: 0.8, // Good quality for processing
         videoMaxDuration: 60, // 60 seconds max
+        videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
       });
 
       if (!result.canceled && result.assets.length > 0) {
-        console.log('Video recorded:', result.assets[0].uri);
-        onVideoSelected(result.assets[0].uri);
+        const videoUri = result.assets[0].uri;
+        const { width, height } = result.assets[0];
+        
+        console.log('Video recorded:', videoUri);
+        console.log('Video dimensions:', { width, height });
+        
+        // Check video processing recommendation
+        const recommendation = getVideoProcessingRecommendation(width, height);
+        
+        if (recommendation.action === 'recommend_retake') {
+          Alert.alert(
+            'Video Quality Issue',
+            recommendation.message,
+            [
+              { text: 'Use Anyway', onPress: () => onVideoSelected(videoUri) },
+              { text: 'Re-record', style: 'cancel' }
+            ]
+          );
+        } else if (recommendation.action === 'will_resize') {
+          Alert.alert(
+            'Video Processing Info',
+            recommendation.message + '\n\nNo content will be cropped - letterbox/pillarbox will be added if needed.',
+            [
+              { text: 'Continue', onPress: () => onVideoSelected(videoUri) },
+              { text: 'Re-record', style: 'cancel' }
+            ]
+          );
+        } else {
+          // Optimal video - use as is
+          onVideoSelected(videoUri);
+        }
       }
     } catch (error) {
       console.error('Camera launch failed:', error);
@@ -99,13 +130,43 @@ const VideoInputSlide = ({ onVideoSelected, onBack }: VideoInputSlideProps) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-        allowsEditing: false,
-        quality: 1,
+        allowsEditing: false, // Disable editing to avoid cropping
+        quality: 0.8, // Good quality for processing
+        videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
       });
 
       if (!result.canceled && result.assets.length > 0) {
-        console.log('Video selected:', result.assets[0].uri);
-        onVideoSelected(result.assets[0].uri);
+        const videoUri = result.assets[0].uri;
+        const { width, height } = result.assets[0];
+        
+        console.log('Video selected:', videoUri);
+        console.log('Video dimensions:', { width, height });
+        
+        // Check video processing recommendation
+        const recommendation = getVideoProcessingRecommendation(width, height);
+        
+        if (recommendation.action === 'recommend_retake') {
+          Alert.alert(
+            'Video Quality Issue',
+            recommendation.message,
+            [
+              { text: 'Use Anyway', onPress: () => onVideoSelected(videoUri) },
+              { text: 'Choose Another', style: 'cancel' }
+            ]
+          );
+        } else if (recommendation.action === 'will_resize') {
+          Alert.alert(
+            'Video Processing Info',
+            recommendation.message + '\n\nNo content will be cropped - letterbox/pillarbox will be added if needed.',
+            [
+              { text: 'Continue', onPress: () => onVideoSelected(videoUri) },
+              { text: 'Choose Another', style: 'cancel' }
+            ]
+          );
+        } else {
+          // Optimal video - use as is
+          onVideoSelected(videoUri);
+        }
       }
     } catch (error) {
       console.error('Pick video error:', error);
@@ -156,7 +217,7 @@ const VideoInputSlide = ({ onVideoSelected, onBack }: VideoInputSlideProps) => {
       <Animatable.View animation="fadeInUp" delay={800} style={inputStyles.infoContainer}>
         <MaterialIcons name="info-outline" size={20} color="#64748B" />
         <Text style={inputStyles.infoText}>
-          Videos should be clear and well-lit for best recognition results
+          Videos will be processed to fit 640x480 without cropping content. For best results: use clear lighting and steady camera
         </Text>
       </Animatable.View>
 
